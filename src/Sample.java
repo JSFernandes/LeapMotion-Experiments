@@ -5,19 +5,22 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 import com.leapmotion.leap.Controller;
-import com.leapmotion.leap.Frame;
 
 class Sample extends JFrame {
 	
-	static JButton b1;
-	static JButton b2;
-	static JButton b3;
-	static JLabel label;
-	static JFrame j_frame;
+	JButton b1;
+	JButton b2;
+	JButton b3;
+	JLabel label;
+	long time_selected = 0;
+	long last_time = 0;
+	int n_fingers_last_frame = 0;
+	JButton selected;
+	public Controller controller = new Controller();
+	public SampleListener listener;
 	
 	public Sample() {
 		
@@ -49,93 +52,63 @@ class Sample extends JFrame {
 		setTitle("Simple example");
 	    setSize(600, 400);
 	    setLocationRelativeTo(null);
-	    setDefaultCloseOperation(EXIT_ON_CLOSE);        
+	    setDefaultCloseOperation(EXIT_ON_CLOSE);      
+	    
+	   listener = new SampleListener(this);
+	   controller.addListener(listener);
 	}
 	
+	
+	public void updateFingerCount(int nfingers, long time) {
+		if(!this.isActive())
+			return;
+		
+		else {
+			long time_dif = time - last_time;
+			last_time = time;
+			System.out.println(time_dif);
+			if(nfingers == n_fingers_last_frame && nfingers != 0) {
+				time_selected += time_dif;
+				label.setText(String.valueOf(time_selected));
+				if(time_selected >= 1000000) {
+					selected.doClick();
+					label.setText("0");
+					time_selected = 0;
+				}
+			}
+			else {
+				time_selected = 0;
+				if(nfingers == 1) {
+					n_fingers_last_frame = 1;
+					selected = b1;
+					b1.requestFocus();
+				}
+				else if(nfingers == 2) {
+					n_fingers_last_frame = 2;
+					selected = b2;
+					b2.requestFocus();
+				}
+				else if(nfingers == 3) {
+					n_fingers_last_frame = 3;
+					selected = b3;
+					b3.requestFocus();
+				}
+				else {
+					n_fingers_last_frame = 0;
+				}
+			}
+		}
+	}
     public static void main(String[] args) {
-        // Create a sample listener and controller
-        SampleListener listener = new SampleListener();
-        Controller controller = new Controller();
-
-        // Have the sample listener receive events from the controller
-        controller.addListener(listener);
 
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
                 Sample ex = new Sample();
-                j_frame = ex;
                 ex.setVisible(true);
             }
         });
         
-        int last_fingercount = 0;
-        short repeated_fingercount_frames = 0;
-        int n_fingers;
-        
-        try {
-			Thread.sleep(500);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-        
-        while(true) {
-        	if(j_frame.isActive()) {
-	        	Frame frame = controller.frame();
-	        	n_fingers = frame.fingers().count();
-	        	label.setText(String.valueOf(repeated_fingercount_frames));
-	        	if(n_fingers == last_fingercount && last_fingercount != 0) {
-	        		++repeated_fingercount_frames;
-	        		if(repeated_fingercount_frames >= 10) {
-	        			repeated_fingercount_frames = 0;
-	        			if(n_fingers == 1)
-	        				b1.doClick();
-	        			else if(n_fingers == 2)
-	        				b2.doClick();
-	        			else if(n_fingers == 3)
-	        				b3.doClick();
-	        		}
-	        	}
-	        	else {
-	        		repeated_fingercount_frames = 0;
-		        	if(n_fingers == 1) {
-		        		b1.requestFocus();
-		        		last_fingercount = 1;
-		        	}
-		        	else if(n_fingers == 2) {
-		        		b2.requestFocus();
-		        		last_fingercount = 2;
-		        	}
-		        	else if(n_fingers == 3) {
-		        		b3.requestFocus();
-		        		last_fingercount = 3;
-		        	}
-	        	}
-        	}
-	        	//System.out.println("Frame id: " + frame.id()
-	        	//                 + ", timestamp: " + frame.timestamp()
-	        	//                 + ", hands: " + frame.hands().count()
-	        	//                 + ", fingers: " + frame.fingers().count()
-	        	//                 + ", tools: " + frame.tools().count());
-	        try {
-	        	Thread.sleep(250);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-        	
-        }
-        /*
-        // Keep this process running until Enter is pressed
-        System.out.println("Press Enter to quit...");
-        try {
-            System.in.read();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // Remove the sample listener when done
-        controller.removeListener(listener);*/
+        while(true);
     }
 }
